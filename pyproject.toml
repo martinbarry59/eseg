@@ -46,10 +46,7 @@ dev = [
   "pytest-cov>=4.1.0",
   "types-PyYAML",
 ]
-viewer = [
-  "dv-processing; platform_system == 'Linux'",
-  "metavision-sdk; platform_system == 'Linux'",
-]
+
 
 [project.urls]
 Homepage = "https://github.com/youruser/surreal-events"
