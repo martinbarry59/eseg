@@ -73,11 +73,12 @@ class dataviewer:
         return events_tensor.to(self.device)
 
     def predict(self):
-        self.events_history[0:-1] = self.events_history[1:]
-        self.events_history[-1] = self.events
-        events_tensor = torch.concat(self.events_history, dim=0)
-        seq_events = events_tensor.unsqueeze(0).unsqueeze(0).to(self.device)
-        predictions, encodings, seq_events = self.model(seq_events)
+        with torch.no_grad():
+            self.events_history[0:-1] = self.events_history[1:]
+            self.events_history[-1] = self.events
+            events_tensor = torch.concat(self.events_history, dim=0)
+            seq_events = events_tensor.unsqueeze(0).unsqueeze(0).to(self.device)
+            predictions, _, seq_events = self.model(seq_events)
         return predictions, seq_events
 
     def mergePredictions(self, img, predictions):

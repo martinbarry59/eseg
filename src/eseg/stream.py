@@ -75,11 +75,16 @@ def parse_args():
     return parser.parse_args()
 
 def run():
+    args = parse_args()
+    
     try:
         sys.path.append("/usr/lib/python3/dist-packages")
 
         from metavision_sdk_stream import Camera  # type: ignore
-        camera = Camera.from_first_available()
+        if args.input_event_file:
+            camera = Camera.from_file(args.input_event_file)
+        else:
+            camera = Camera.from_first_available()
 
         from .utils.dataviewers import dataviewerprophesee as dataviewer  # type: ignore
     except Exception:
