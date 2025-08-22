@@ -6,7 +6,7 @@ model from checkpoint and visualizes predicted depth maps in real time.
 """
 
 from eseg.models.ConvLSTM import EConvlstm
-from .config import checkpoint_path
+from eseg.config import checkpoint_path
 
 import cv2
 import torch
@@ -53,6 +53,7 @@ def load_model():
                 print("Continuing without pretrained weights.")
     else:
         model = EConvlstm(model_type=network, skip_lstm=True)
+    return model
 model = load_model()
 # Attempt dynamic camera backend selection
 
@@ -80,13 +81,13 @@ def run():
         from metavision_sdk_stream import Camera  # type: ignore
         camera = Camera.from_first_available()
 
-        from utils.dataviewers import dataviewerprophesee as dataviewer  # type: ignore
+        from .utils.dataviewers import dataviewerprophesee as dataviewer  # type: ignore
     except Exception:
         try:
             import dv_processing as dv  # type: ignore
 
             camera = dv.io.camera.open()
-            from utils.dataviewers import dataviewerdavis as dataviewer  # type: ignore
+            from .utils.dataviewers import dataviewerdavis as dataviewer  # type: ignore
         except Exception:
             print("Could not find any compatible event cameras.")
             sys.exit(1)
