@@ -26,7 +26,7 @@ def load_model():
     checkpoint_file: Optional[str] = None
 
     if checkpoint_path:
-        checkpoint_file = f"{checkpoint_path}/model_epoch_2_CONVLSTM.pth"
+        checkpoint_file = f"{checkpoint_path}/CONVLSTM.pth"
 
         model = EConvlstm(model_type=network, skip_lstm=True)
         print(f"Loading checkpoint from {checkpoint_file}")
