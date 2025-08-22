@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eseg"
-version = "0.1.4"
+version = "0.1.5"
 description = "Models and utilities for event-based depth / segmentation (Surreal benchmark)."
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
@@ -74,12 +74,12 @@ ignore = ["ANN101", "ANN102"]
 docstring-convention = "numpy"
 
 [tool.mypy]
-python_version = "0.1.4"
+python_version = "0.1.5"
 ignore_missing_imports = true
 strict = false
 
 [tool.pytest.ini_options]
-minversion = "0.1.4"
+minversion = "0.1.5"
 addopts = "-ra -q --cov=surreal_events"
 pythonpath = ["src"]
 

@@ -16,7 +16,7 @@ from typing import Optional, List
 # ImportError on systems without the vendor libraries installed.
 
 sys.path.append("/usr/lib/python3/dist-packages")
-from metavision_sdk_stream import Camera, CameraStreamSlicer, SliceCondition  # type: ignore
+from metavision_sdk_stream import CameraStreamSlicer, SliceCondition  # type: ignore
 from metavision_sdk_cv import ActivityNoiseFilterAlgorithm  # type: ignore
 from metavision_sdk_base import EventCDBuffer  # type: ignore
 
