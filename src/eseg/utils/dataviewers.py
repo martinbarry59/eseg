@@ -27,9 +27,12 @@ class dataviewer:
     Subclasses define how to acquire events from device-specific SDKs.
     """
 
-    def __init__(self, camera):
+    def __init__(self, camera,
+                 
+                 
+                 
+                 ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.max_events = 1000
         self.width, self.height = None, None
         self.events: Optional[torch.Tensor] = None
         self.instant_events = None
@@ -39,13 +42,8 @@ class dataviewer:
         self.slicer = None
         self.filter = None
         self.reader = None
-        self.events_history: List[torch.Tensor] = [
-            torch.zeros(1, 4, dtype=torch.float32, device=self.device) for _ in range(1)
-        ]
-        self.camera = camera
 
-    def retrieveEvents(self, events):  # callback signature from SDK
-        self.instant_events = events
+        self.camera = camera
 
     def setModel(self, model):
         self.model = model
@@ -74,10 +72,8 @@ class dataviewer:
 
     def predict(self):
         with torch.no_grad():
-            self.events_history[0:-1] = self.events_history[1:]
-            self.events_history[-1] = self.events
-            events_tensor = torch.concat(self.events_history, dim=0)
-            seq_events = events_tensor.unsqueeze(0).unsqueeze(0).to(self.device)
+            
+            seq_events = self.events.unsqueeze(0).unsqueeze(0).to(self.device)
             predictions, _, seq_events = self.model(seq_events)
         return predictions, seq_events
 
@@ -115,15 +111,17 @@ class dataviewer:
 class dataviewerdavis(dataviewer):
     """Viewer for DAVIS / Inivation style cameras using dv_processing."""
 
-    def __init__(self, camera):
+    def __init__(self, camera,
+                 slice_time_ms: int = 100,
+                 filter_size_ms: int = 20):
         print("Using dv_processing for event processing")
         super().__init__(camera)
         self.width, self.height = self.camera.getEventResolution()
         self.slicer = dv.EventStreamSlicer()
         self.filter = dv.noise.BackgroundActivityNoiseFilter(
-            (self.width, self.height), backgroundActivityDuration=timedelta(milliseconds=100)
+            (self.width, self.height), backgroundActivityDuration=timedelta(milliseconds=filter_size_ms)
         )
-        self.slicer.doEveryTimeInterval(timedelta(milliseconds=60), self.retrieveEvents)
+        self.slicer.doEveryTimeInterval(timedelta(milliseconds=slice_time_ms), self.retrieveEvents)
 
     def run(self):
         while self.camera.isRunning():
@@ -144,13 +142,15 @@ class dataviewerdavis(dataviewer):
 class dataviewerprophesee(dataviewer):
     """Viewer for Prophesee devices using Metavision SDK."""
 
-    def __init__(self, camera):
+    def __init__(self, camera,
+                 slice_time_ms: int = 100,
+                 filter_size_ms: int = 20):
         super().__init__(camera)
         print("Using metavision_sdk_stream for event processing")
         self.width, self.height = self.camera.width(), self.camera.height()
-        slice_condition = SliceCondition.make_n_us(100000)
+        slice_condition = SliceCondition.make_n_us(slice_time_ms * 1000)
         self.slicer = CameraStreamSlicer(self.camera.move(), slice_condition=slice_condition)
-        self.activity_filter = ActivityNoiseFilterAlgorithm(self.width, self.height, 20000)
+        self.activity_filter = ActivityNoiseFilterAlgorithm(self.width, self.height, filter_size_ms * 1000)
 
     def run(self):
         for slice in self.slicer:
