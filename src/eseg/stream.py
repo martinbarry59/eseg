@@ -17,7 +17,7 @@ from eseg.utils.functions import _download_checkpoint
 
 # Mock URL for pretrained model (replace with real one later)
 PRETRAINED_CHECKPOINT_URL = (
-    "https://raw.githubusercontent.com/martinbarry59/SurrealEvent/main/checkpoints/model_epoch_2_CONVLSTM.pth"
+    "https://raw.githubusercontent.com/martinbarry59/SurrealEvent/main/checkpoints/CONVLSTM.pth"
 )
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
