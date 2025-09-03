@@ -122,7 +122,7 @@ class EConvlstm(nn.Module):
                     events[:,:, 1] = events[:, :, 1].clamp(0, self.width-1)
                     events[:,:, 2] = events[:, :, 2].clamp(0, self.height-1)
 
-                    hist_events = eventstovoxel(events, self.height, self.width, training=training, hotpixel=hotpixel).float()
+                    hist_events = eventstovoxel(events, self.height, self.width, training=training, hotpixel=False).float()
                     seq_events.append(hist_events)
                 else:
                     hist_events = events

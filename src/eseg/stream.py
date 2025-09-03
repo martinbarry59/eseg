@@ -30,7 +30,7 @@ def load_model():
 
         if checkpoint_path:
             checkpoint_file = f"{checkpoint_path}/CONVLSTM.pth"
-
+            checkpoint_file = f"{checkpoint_path}/model_epoch_3_CONVLSTM.pth"
             model = EConvlstm(model_type=network, skip_lstm=True)
             print(f"Loading checkpoint from {checkpoint_file}")
             try:
@@ -74,7 +74,6 @@ def parse_args():
         help="Path to input event file (RAW or HDF5). If omitted, a live camera is used.",
     )
     parser.add_argument(
-        "-s",
         "--slice-time-ms",
         type=int,
         default=100,
@@ -87,35 +86,106 @@ def parse_args():
         default=20,
         help="Size of the temporal noise filter in milliseconds.",
     )
-    return parser.parse_args()
-
-def run(input_event_file = None,slice_time_ms: int = 100, filter_size_ms: int = 20):
-    
-    # try:
-    sys.path.append("/usr/lib/python3/dist-packages")
-
-    from metavision_sdk_stream import Camera  # type: ignore
-    if input_event_file:
-        camera = Camera.from_file(input_event_file)
+    parser.add_argument(
+        "-s",
+        "--save-output-video",
+        type=str,
+        default=None,
+        help="Save output video to file, gif or mp4.",
+        
+    )
+    ## test if save path is valid MP4 or GIF
+    args = parser.parse_args()
+    if args.save_output_video is not None:
+        if not (args.save_output_video.endswith('.mp4') or args.save_output_video.endswith('.gif')):
+            parser.error("Output video file must be of type .mp4 or .gif")
+            sys.exit(1)
+    return args
+def load_metavision(verbose=False, continue_on_fail=False):
+    metavision = None
+    try:
+        sys.path.append("/usr/lib/python3/dist-packages")
+        import metavision_sdk_stream as metavision   # type: ignore
+    except Exception as e:
+        if verbose:
+            print("Metavision SDK not found. Cannot read .hdf5 files or connect to Prophesee cameras.")
+            print("if Metavision is installed, ensure  it is installed locally or in /usr/lib/python3/dist-packages")
+            print(e)
+        if not continue_on_fail:
+            sys.exit(1)
+    return metavision
+def load_dv_processing(verbose=False, continue_on_fail=False):
+    dv = None
+    try:
+        import dv_processing as dv  # type: ignore
+    except Exception as e:
+        if verbose:
+            print("dv_processing not found. Cannot read Raw or aedat files.")
+            print(e)
+        if not continue_on_fail:
+            sys.exit(1)
+    return dv
+def from_file(input_event_file):
+    if  input_event_file.endswith('.hdf5'):
+        metavision = load_metavision(verbose=True, continue_on_fail=False)
+        try:
+            camera = metavision.Camera.from_file(input_event_file)
+            camera_type = 'Prophesee'
+        except Exception as e:
+            print(f"Failed to load events from file: {input_event_file}")
+            print(e)
+            sys.exit(1)
     else:
-        camera = Camera.from_first_available()
+        dv = load_dv_processing(verbose=True, continue_on_fail=False)
+        try:
+            camera = dv.io.MonoCameraRecording(input_event_file)
+            camera_type = 'DAVIS'
+        except Exception as e:
+            print(f"Failed to load events from file: {input_event_file}")
+            print(e)
+            sys.exit(1)
+    return camera, camera_type
+def from_camera():
+    print("No input file provided. Trying to open a camera.")
+    metavision = load_metavision(verbose=True, continue_on_fail=True)
+    camera = None
+    if metavision is not None:
+        try:
+            camera = metavision.Camera.from_first_available()
+            camera_type = 'Prophesee'
+        except Exception as e:
+            print(e)
+            print("Failed to find a Prophesee camera. Moving to dv_processing.")
 
-    from .utils.dataviewers import dataviewerprophesee as dataviewer  # type: ignore
-    # except Exception:
-    #     try:
-    #         import dv_processing as dv  # type: ignore
-
-    #         camera = dv.io.camera.open()
-    #         from .utils.dataviewers import dataviewerdavis as dataviewer  # type: ignore
-    #     except Exception:
-    #         print("Could not find any compatible event cameras.")
-    #         sys.exit(1)
-    viewer = dataviewer(camera, slice_time_ms=slice_time_ms, filter_size_ms=filter_size_ms)
+    if camera is None:
+        print("No Prophesee camera found. Trying to open a DAVIS camera using dv_processing.")
+        dv = load_dv_processing(verbose=True, continue_on_fail=False)
+        if dv is not None:
+            try:
+                camera = dv.io.camera.open()
+                camera_type = 'DAVIS'
+            except Exception as e:
+                print(e)
+                print("Failed to find a DAVIS camera.")
+                sys.exit(1)
+    return camera, camera_type
+def run(input_event_file = None,slice_time_ms: int = 100, filter_size_ms: int = 20, save_video: str = None):
+    if input_event_file:
+        camera, camera_type = from_file(input_event_file)
+    else:
+        camera, camera_type = from_camera()
+    if camera_type == 'Prophesee':
+        from eseg.utils.dataviewers import dataviewerprophesee as dataviewer
+    else:
+        from eseg.utils.dataviewers import dataviewerdavis as dataviewer
+    viewer = dataviewer(camera, slice_time_ms=slice_time_ms, filter_size_ms=filter_size_ms, video_save_path=save_video)
 
     model.to(device)
     viewer.setModel(model)
     viewer.run()
-
+    # if viewer.se is not None:
+    #     print("Writing video to file... please wait")
+    #     viewer.video_writer.release()
     cv2.destroyAllWindows()
 
 
@@ -124,5 +194,6 @@ if __name__ == "__main__":
     run(
         input_event_file=args.input_event_file,
         slice_time_ms=args.slice_time_ms,
-        filter_size_ms=args.filter_size_ms
+        filter_size_ms=args.filter_size_ms,
+        save_video=args.save_output_video
     )

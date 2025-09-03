@@ -33,3 +33,8 @@ htmlcov/
 
 # OS
 .DS_Store
+
+src/checkpoints/*
+!src/checkpoints/.CONVLSTM.pth
+
+**/*.hdf5
