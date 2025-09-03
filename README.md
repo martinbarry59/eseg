@@ -1,4 +1,6 @@
 # surreal-events
+Example from Prophesee Samples
+![](pedestrians.gif)
 
 Event-based depth / segmentation utilities and models (experimental).  
 
