@@ -1,6 +1,7 @@
-# surreal-events
+# Human Instance Segmentation using Evn
 
-Event-based depth / segmentation utilities and models (experimental).  
+![](pedestrians.gif)
+
 
 ## Features
 - ConvLSTM-based depth estimation model for event streams
@@ -9,7 +10,17 @@ Event-based depth / segmentation utilities and models (experimental).
 - Real-time camera viewers (Metavision / DAVIS) with overlay visualization
 - Mixed perceptual + edge loss utilities (LPIPS + Sobel)
 
+## Requirements
+We implemented the dataviewers on Both [dvprocessing](https://dv-processing.inivation.com/master/index.html) and [metavisionSDK](https://docs.prophesee.ai/stable/get_started/get_started_python.html)
+
+But our Human segmentation model does not seem to work with events generated from dvprocessing. (it is ongoing work)
+
+Please install [metavisionSDK](https://docs.prophesee.ai/stable/get_started/get_started_python.html) for live camera. 
+
+For hdf5 file we use [metavisionSDK](https://docs.prophesee.ai/stable/get_started/get_started_python.html)  aedat files can be processed using [dvprocessing](https://dv-processing.inivation.com/master/index.html)
+
 ## Installation
+
 ```bash
 pip install eseg
 ```
