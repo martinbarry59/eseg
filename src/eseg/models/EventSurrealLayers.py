@@ -51,7 +51,14 @@ class ConvLSTM(nn.Module):
     to truncate BPTT while preserving numerical values.
     """
 
-    def __init__(self, input_dim: int, hidden_dims: List[int], kernel_size: int, num_layers: int, bias: bool = True):
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_dims: List[int],
+        kernel_size: int,
+        num_layers: int,
+        bias: bool = True,
+    ):
         super().__init__()
         self.num_layers = num_layers
         self.hidden_dims = hidden_dims
@@ -107,7 +114,9 @@ class Encoder(nn.Module):
     UNet-like skip connections during decoding.
     """
 
-    def __init__(self, in_channels: int, out_channels: int | None = None):  # out_channels kept for backward compat
+    def __init__(
+        self, in_channels: int, out_channels: int | None = None
+    ):  # out_channels kept for backward compat
         super().__init__()
         base = mobilenet_v2(weights=MobileNet_V2_Weights.IMAGENET1K_V1).features
         old_conv = base[0][0]

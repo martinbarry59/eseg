@@ -38,3 +38,5 @@ src/checkpoints/*
 !src/checkpoints/.CONVLSTM.pth
 
 **/*.hdf5
+**/*.aedat*
+**/*.gif
