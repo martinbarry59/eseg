@@ -13,9 +13,12 @@
 ## Requirements
 We implemented the dataviewers on Both [dvprocessing](https://dv-processing.inivation.com/master/index.html) and [metavisionSDK](https://docs.prophesee.ai/stable/get_started/get_started_python.html)
 
-But our Human segmentation model does not seem to work with events generated from dvprocessing. (it is ongoing work)
 
-Please install [metavisionSDK](https://docs.prophesee.ai/stable/get_started/get_started_python.html) for live camera. 
+Please install [metavisionSDK](https://docs.prophesee.ai/stable/get_started/get_started_python.html) for Prophesee live camera. 
+
+And / Or
+
+[dvprocessing](https://dv-processing.inivation.com/master/index.html) for Davis Cameras
 
 For hdf5 file we use [metavisionSDK](https://docs.prophesee.ai/stable/get_started/get_started_python.html)  aedat files can be processed using [dvprocessing](https://dv-processing.inivation.com/master/index.html)
 
