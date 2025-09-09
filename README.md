@@ -36,8 +36,12 @@ cd eseg
 python -m venv .venv
 source .venv/bin/activate  # Linux / macOS
 pip install -e .[dev,viewer]
-```
 
+```
+⚠️ Warning if you work on a virtualenvironment you will need to copy your global sdk library to your local environment
+```
+cp -r path/to/your/metavisionsdk/metavision_* <path/to/your/virtualenv/python<yourversion>/site-packages/
+```
 ## Quick Start
 ```python
 import torch
