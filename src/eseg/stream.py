@@ -5,7 +5,6 @@ back to a DAVIS device using `dv_processing`. Loads a ConvLSTM-based
 model from checkpoint and visualizes predicted depth maps in real time.
 """
 
-import cv2
 from eseg.utils.loaders import load_model, load_metavision, load_dv_processing
 import sys
 import argparse
@@ -124,8 +123,6 @@ def run(
 
     viewer.setModel(model)
     viewer.run()
-
-    cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":

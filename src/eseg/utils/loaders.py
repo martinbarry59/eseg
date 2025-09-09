@@ -73,15 +73,16 @@ def load_model():
 def load_metavision(verbose=False, continue_on_fail=False):
     metavision = None
     try:
-        sys.path.append("/usr/lib/python3/dist-packages")
+        # sys.path.append("/usr/lib/python3/dist-packages")
         import metavision_sdk_stream as metavision  # type: ignore
+        print("Metavision SDK successfully loaded.")
     except Exception as e:
         if verbose:
             print(
                 "Metavision SDK not found. Cannot read .hdf5 files or connect to Prophesee cameras."
             )
             print(
-                "if Metavision is installed, ensure  it is installed locally or in /usr/lib/python3/dist-packages"
+                "if Metavision is installed, ensure  it is installed locally "
             )
             print(e)
         if not continue_on_fail:

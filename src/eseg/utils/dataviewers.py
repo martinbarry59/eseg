@@ -111,8 +111,8 @@ class dataviewer:
         key = cv2.waitKey(1)
         if key == 27:  # ESC
             cv2.destroyAllWindows()
-            exit(0)
-
+            self.saveVideo()
+            sys.exit(0)
     def retrieveEvents(self, events):
         self.instant_events = events
 
@@ -132,7 +132,13 @@ class dataviewer:
 
     def step(self, slice):
         raise NotImplementedError
-
+    def saveVideo(self):
+        if self.video_save_path is not None:
+            if self.save_type == "gif":
+                
+                self.video_writer.close()
+            else:
+                self.video_writer.release()
 
 class dataviewerdavis(dataviewer):
     """Viewer for DAVIS / Inivation style cameras using dv_processing."""
@@ -141,10 +147,11 @@ class dataviewerdavis(dataviewer):
         self,
         camera,
         slice_time_ms: int = 100,
-        filter_size_ms: int = 100,
+        filter_size_ms: int = 20,
         video_save_path: Optional[str] = None,
     ):
         print("Using dv_processing for event processing")
+        print(video_save_path)
         super().__init__(camera, video_save_path=video_save_path)
         self.width, self.height = self.camera.getEventResolution()
         self.slicer = dv.EventStreamSlicer()
@@ -167,9 +174,9 @@ class dataviewerdavis(dataviewer):
         if self.instant_events is None or len(self.instant_events) == 0:
             return
         self.filter.accept(self.instant_events)
-        print("Filtered events:", self.filter.getReductionFactor())
         filtered_events = self.filter.generateEvents()
-
+        if filtered_events is None or len(filtered_events) == 0:
+            return
         self.processEvents(filtered_events, reversex=True)
 
 
