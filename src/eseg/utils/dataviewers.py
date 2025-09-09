@@ -10,17 +10,13 @@ import cv2
 from datetime import timedelta
 import numpy as np
 import sys
-import dv_processing as dv
 from typing import Optional, List
 import imageio
 
 # NOTE: System-specific SDK imports (Metavision) follow. These may raise
 # ImportError on systems without the vendor libraries installed.
 
-sys.path.append("/usr/lib/python3/dist-packages")
-from metavision_sdk_stream import CameraStreamSlicer, SliceCondition  # type: ignore
-from metavision_sdk_cv import ActivityNoiseFilterAlgorithm  # type: ignore
-from metavision_sdk_base import EventCDBuffer  # type: ignore
+
 
 
 class dataviewer:
@@ -70,14 +66,14 @@ class dataviewer:
         ts = events["timestamp"] if reversex else events["t"]
         ts = ts - ts.min()
         events_tensor = torch.stack(
-            (
-                torch.tensor(ts.copy()),
-                torch.tensor(xs.copy()).float(),
-                torch.tensor(ys.copy()).float(),
-                torch.tensor(ps.copy()).float(),
-            ),
-            dim=1,
-        )
+        (
+            torch.tensor(ts.copy()),
+            torch.tensor(xs.astype(np.int32, copy=False)).float(),
+            torch.tensor(ys.astype(np.int32, copy=False)).float(),
+            torch.tensor(ps.copy()).float(),
+        ),
+        dim=1,
+)
         return events_tensor.to(self.device)
 
     def predict(self):
@@ -151,7 +147,8 @@ class dataviewerdavis(dataviewer):
         video_save_path: Optional[str] = None,
     ):
         print("Using dv_processing for event processing")
-        print(video_save_path)
+        import dv_processing as dv
+
         super().__init__(camera, video_save_path=video_save_path)
         self.width, self.height = self.camera.getEventResolution()
         self.slicer = dv.EventStreamSlicer()
@@ -192,6 +189,10 @@ class dataviewerprophesee(dataviewer):
     ):
         super().__init__(camera, video_save_path=video_save_path)
         print("Using metavision_sdk_stream for event processing")
+        from metavision_sdk_stream import CameraStreamSlicer, SliceCondition  # type: ignore
+        from metavision_sdk_cv import ActivityNoiseFilterAlgorithm  # type: ignore
+        from metavision_sdk_base import EventCDBuffer  # type: ignore
+        self.buffer = EventCDBuffer()
         self.width, self.height = self.camera.width(), self.camera.height()
 
         slice_condition = SliceCondition.make_n_us(slice_time_ms * 1000)
@@ -205,6 +206,5 @@ class dataviewerprophesee(dataviewer):
             self.step(slice)
 
     def step(self, slice):
-        events_buf = EventCDBuffer()
-        self.activity_filter.process_events(slice.events, events_buf)
-        self.processEvents(events_buf, reversex=False)
+        self.activity_filter.process_events(slice.events, self.buffer)
+        self.processEvents(self.buffer, reversex=False)

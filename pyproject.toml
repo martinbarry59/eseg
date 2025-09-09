@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eseg"
-version = "1.0.2"
+version = "1.0.3"
 description = "Models and utilities for event-based depth / segmentation (Surreal benchmark)."
 readme = "README.md"
 requires-python = "==3.12.*"
@@ -25,8 +25,6 @@ classifiers = [
 ]
 dependencies = [
     "opencv-python>=4.9.0",
-    "torch>=2.2.0",
-    "torchvision>=0.17.0",
     "numpy>=1.24,<3.0",
     "h5py>=3.10",
     "tqdm>=4.64",
@@ -76,12 +74,12 @@ ignore = ["ANN101", "ANN102"]
 docstring-convention = "numpy"
 
 [tool.mypy]
-python_version = "1.0.2"
+python_version = "1.0.3"
 ignore_missing_imports = true
 strict = false
 
 [tool.pytest.ini_options]
-minversion = "1.0.2"
+minversion = "1.0.3"
 addopts = "-ra -q --cov=surreal_events"
 pythonpath = ["src"]
 

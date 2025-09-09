@@ -16,13 +16,20 @@ We implemented the dataviewers on Both [dvprocessing](https://dv-processing.iniv
 
 Please install [metavisionSDK](https://docs.prophesee.ai/stable/get_started/get_started_python.html) for Prophesee live camera. 
 
+⚠️ Warning DO NOT forget to set metavisionsdk in your python path especially for windows!
+
 And / Or
 
 [dvprocessing](https://dv-processing.inivation.com/master/index.html) for Davis Cameras
 
 For hdf5 file we use [metavisionSDK](https://docs.prophesee.ai/stable/get_started/get_started_python.html)  aedat files can be processed using [dvprocessing](https://dv-processing.inivation.com/master/index.html)
 
+Pleas, before installing eseg install a GPU enabled pytorch here: https://pytorch.org/get-started/locally/
+
+
 ## Installation
+
+
 
 ```bash
 pip install eseg
@@ -42,6 +49,8 @@ pip install -e .[dev,viewer]
 ```
 cp -r path/to/your/metavisionsdk/metavision_* <path/to/your/virtualenv/python<yourversion>/site-packages/
 ```
+
+
 ## Quick Start
 ```python
 import torch
