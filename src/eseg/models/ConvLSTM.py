@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from .EventSurrealLayers import Encoder, Decoder, ConvLSTM
 from eseg.utils.functions import eventstovoxel
-
+import time
 
 class EConvlstm(nn.Module):
     def __init__(self, model_type="CONVLSTM", width=346, height=260, skip_lstm=True):
@@ -17,7 +17,7 @@ class EConvlstm(nn.Module):
         # Embed each event (t, x, y, p)
         self.encoder = Encoder(5)
         self.encoder_channels = [32, 24, 32, 64, 1280]
-
+        self.model_inference_times ={ "voxelization": [], "Encoder": [], "LSTMres": [], "upsampling": []}
         self.mheight = 9
         self.mwidth = 11
 
@@ -111,7 +111,7 @@ class EConvlstm(nn.Module):
 
     def forward(self, event_sequence, training=False, hotpixel=False):
         # events: [B, N, 4], mask: [B, N] (True = valid, False = padding)
-
+        start_time = time.time()
         lstm_inputs = []
         timed_features = [[] for _ in range(len(self.encoder_channels))]  # For skip connections
         seq_events = []
@@ -139,12 +139,14 @@ class EConvlstm(nn.Module):
                     # exit()
                 else:
                     hist_events = events
-
+            self.model_inference_times["voxelization"].append(time.time() - start_time)
+            start_time = time.time()
             CNN_encoder, feats = self.encoder(hist_events)
             for i, f in enumerate(feats):
                 timed_features[i].append(f)
-
-            # Concatenate the outputs from the transformer and CNN
+            self.model_inference_times["Encoder"].append(time.time() - start_time)
+            start_time = time.time()
+            # Concatenate the outputs from the transformer  and CNN
             interpolated = F.interpolate(
                 CNN_encoder, size=(self.mheight, self.mwidth), mode="bilinear", align_corners=False
             )
@@ -158,9 +160,11 @@ class EConvlstm(nn.Module):
                 skip_out = skip_lstm(skip_feats)  # Output: [B, T, C, H, W]
                 skip_outputs.append(skip_out.clone())
         encodings = self.convlstm(lstm_inputs)
+        self.model_inference_times["LSTMres"].append(time.time() - start_time)
+
         # Decode to full self.resolution depth map
         outputs = []
-
+        start_time = time.time()
         for t in range(encodings.shape[1]):
             if self.skip_lstm:
                 skip_feats_t = [skip_outputs[i][:, t] for i in range(len(skip_outputs))]
@@ -170,5 +174,6 @@ class EConvlstm(nn.Module):
 
             outputs.append(self.final_conv(x))
         outputs = torch.cat(outputs, dim=1)
+        self.model_inference_times["upsampling"].append(time.time() - start_time)
 
         return outputs, encodings.detach(), seq_events

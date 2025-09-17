@@ -9,7 +9,7 @@ from eseg.utils.loaders import load_model, load_metavision, load_dv_processing
 import sys
 import argparse
 
-
+import torch 
 def parse_args():
 
     parser = argparse.ArgumentParser(
@@ -32,7 +32,7 @@ def parse_args():
         "-f",
         "--filter-size-ms",
         type=int,
-        default=20,
+        default=2,
         help="Size of the temporal noise filter in milliseconds.",
     )
     parser.add_argument(
@@ -41,6 +41,12 @@ def parse_args():
         type=str,
         default=None,
         help="Save output video to file, gif or mp4.",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output, including model inference times.",
     )
     ## test if save path is valid MP4 or GIF
     args = parser.parse_args()
@@ -104,6 +110,7 @@ def run(
     slice_time_ms: int = 100,
     filter_size_ms: int = 20,
     save_video: str = None,
+    verbose: bool = False,
 ):
     if input_event_file:
         camera, camera_type = from_file(input_event_file)
@@ -118,6 +125,7 @@ def run(
         slice_time_ms=slice_time_ms,
         filter_size_ms=filter_size_ms,
         video_save_path=save_video,
+        verbose=verbose,
     )
     model = load_model()
 
@@ -132,4 +140,5 @@ if __name__ == "__main__":
         slice_time_ms=args.slice_time_ms,
         filter_size_ms=args.filter_size_ms,
         save_video=args.save_output_video,
+        verbose=args.verbose,
     )

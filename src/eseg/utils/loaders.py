@@ -1,6 +1,7 @@
 import torch
 from typing import Optional
 from eseg.models.ConvLSTM import EConvlstm
+# from eseg.models.EfficientConvLSTM import EfficientConvLSTM as EConvlstm
 from eseg.config import checkpoint_path
 import sys
 import os
@@ -37,6 +38,11 @@ def _download_checkpoint(url: str, dest: str) -> bool:
     print("\nDownload complete.")
     return True
 def load_model():
+    torch.backends.cudnn.benchmark = True
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
+    
+    
     with torch.no_grad():
 
         network = "CONVLSTM"
