@@ -1,7 +1,7 @@
 import torch
 from typing import Optional
 from eseg.models.ConvLSTM import EConvlstm
-# from eseg.models.EfficientConvLSTM import EfficientConvLSTM as EConvlstm
+from eseg.models.EfficientConvLSTM import EfficientConvLSTM 
 from eseg.config import checkpoint_path
 import sys
 import os
@@ -37,7 +37,7 @@ def _download_checkpoint(url: str, dest: str) -> bool:
                 )
     print("\nDownload complete.")
     return True
-def load_model():
+def load_model(model_type: str = "full", checkpoint_path: str = "./checkpoints") -> torch.nn.Module:
     torch.backends.cudnn.benchmark = True
     torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True
@@ -49,8 +49,9 @@ def load_model():
         checkpoint_file: Optional[str] = None
 
         if checkpoint_path:
-            checkpoint_file = f"{checkpoint_path}/CONVLSTM.pth"
-            model = EConvlstm(model_type=network, skip_lstm=True)
+            checkpoint_file = f"{checkpoint_path}/{network + ("_LIGHT" if model_type == "light" else "_FULL")}.pth"
+            
+            model = EConvlstm(model_type=network, skip_lstm=True) if model_type == "full" else EfficientConvLSTM(model_type=network)
             print(f"Loading checkpoint from {checkpoint_file}")
             try:
                 model.load_state_dict(torch.load(checkpoint_file, map_location=device))
@@ -107,3 +108,14 @@ def load_dv_processing(verbose=False, continue_on_fail=False):
         if not continue_on_fail:
             sys.exit(1)
     return dv
+def load_h5py(verbose=False, continue_on_fail=False):
+    h5py = None
+    try:
+        import h5py  # type: ignore
+    except Exception as e:
+        if verbose:
+            print("h5py not found. Cannot read .h5 files.")
+            print(e)
+        if not continue_on_fail:
+            sys.exit(1)
+    return h5py

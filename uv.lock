@@ -231,7 +231,7 @@ wheels = [
 
 [[package]]
 name = "eseg"
-version = "1.0.1"
+version = "1.0.4"
 source = { editable = "." }
 dependencies = [
     { name = "build" },
@@ -246,8 +246,6 @@ dependencies = [
     { name = "plotly" },
     { name = "pytorch-ignite" },
     { name = "scikit-learn" },
-    { name = "torch" },
-    { name = "torchvision" },
     { name = "tqdm" },
     { name = "twine" },
 ]
@@ -281,8 +279,6 @@ requires-dist = [
     { name = "pytorch-ignite", specifier = ">=0.5.2" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.0" },
     { name = "scikit-learn", specifier = ">=1.2" },
-    { name = "torch", specifier = ">=2.2.0" },
-    { name = "torchvision", specifier = ">=0.17.0" },
     { name = "tqdm", specifier = ">=4.64" },
     { name = "twine", specifier = ">=6.1.0" },
     { name = "types-pyyaml", marker = "extra == 'dev'" },

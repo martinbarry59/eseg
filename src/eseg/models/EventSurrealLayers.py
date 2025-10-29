@@ -172,15 +172,40 @@ class Decoder(nn.Module):
             nn.ReLU(inplace=True),
         )
 
+    def _match_size(self, x: torch.Tensor, ref: torch.Tensor) -> torch.Tensor:
+        """Align spatial size of x to ref via symmetric pad/crop (no resampling)."""
+        H, W = ref.shape[-2:]
+        h, w = x.shape[-2:]
+        # Pad if smaller
+        pad_h = max(0, H - h)
+        pad_w = max(0, W - w)
+        if pad_h or pad_w:
+            top = pad_h // 2
+            bottom = pad_h - top
+            left = pad_w // 2
+            right = pad_w - left
+            x = F.pad(x, (left, right, top, bottom))
+            h, w = x.shape[-2:]
+        # Center-crop if larger
+        if h > H or w > W:
+            ys = (h - H) // 2
+            xs = (w - W) // 2
+            x = x[:, :, ys:ys + H, xs:xs + W]
+        return x
+
     def forward(self, x: torch.Tensor, feats: List[torch.Tensor]):
         for i, layer in reversed(list(enumerate(self.decoder_layers))):
             x = layer(x)
             if i != 0:
-                x = F.interpolate(
+                # Align spatial dims without resampling to preserve features
+                target = feats[i - 1]
+                if x.shape[-2:] != target.shape[-2:]:
+                    x = F.interpolate(
                     x, size=feats[i - 1].shape[-2:], mode="bilinear", align_corners=False
                 )
+                # Consistently fuse with the matching skip level
                 if self.method == "concatenate":
-                    x = torch.cat([x, feats[i]], dim=1)
+                    x = torch.cat([x, target], dim=1)
                 else:
-                    x = x + feats[i - 1]
+                    x = x + target
         return x

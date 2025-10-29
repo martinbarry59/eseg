@@ -5,11 +5,11 @@ back to a DAVIS device using `dv_processing`. Loads a ConvLSTM-based
 model from checkpoint and visualizes predicted depth maps in real time.
 """
 
-from eseg.utils.loaders import load_model, load_metavision, load_dv_processing
+from eseg.utils.loaders import load_model, load_metavision, load_dv_processing, load_h5py
 import sys
 import argparse
 
-import torch 
+from eseg.config import checkpoint_path as base_checkpoint_path
 def parse_args():
 
     parser = argparse.ArgumentParser(
@@ -17,7 +17,7 @@ def parse_args():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
-        "-i",
+        "-f-m light",
         "--input-event-file",
         default=None,
         help="Path to input event file (RAW or HDF5). If omitted, a live camera is used.",
@@ -25,11 +25,10 @@ def parse_args():
     parser.add_argument(
         "--slice-time-ms",
         type=int,
-        default=100,
+        default = 100,
         help="Time window for each event slice in milliseconds.",
     )
     parser.add_argument(
-        "-f",
         "--filter-size-ms",
         type=int,
         default=2,
@@ -47,6 +46,13 @@ def parse_args():
         "--verbose",
         action="store_true",
         help="Enable verbose output, including model inference times.",
+    )
+    parser.add_argument(
+        "-m",
+        "--model",
+        default="full",
+        choices=["full", "light"],
+        help="Choose between full or light model variant.",
     )
     ## test if save path is valid MP4 or GIF
     args = parser.parse_args()
@@ -67,11 +73,20 @@ def from_file(input_event_file):
             print(f"Failed to load events from file: {input_event_file}")
             print(e)
             sys.exit(1)
-    else:
+    elif input_event_file.endswith(".aedat4") or input_event_file.endswith(".raw"):
         dv = load_dv_processing(verbose=True, continue_on_fail=False)
         try:
             camera = dv.io.MonoCameraRecording(input_event_file)
             camera_type = "DAVIS"
+        except Exception as e:
+            print(f"Failed to load events from file: {input_event_file}")
+            print(e)
+            sys.exit(1)
+    elif input_event_file.endswith(".h5"):
+        h5py = load_h5py(verbose=True, continue_on_fail=False)
+        try:
+            camera = h5py.File(input_event_file, "r")
+            camera_type = "H5PY"
         except Exception as e:
             print(f"Failed to load events from file: {input_event_file}")
             print(e)
@@ -111,6 +126,8 @@ def run(
     filter_size_ms: int = 20,
     save_video: str = None,
     verbose: bool = False,
+    model_type: str = "full",
+    checkpoint_path: str = base_checkpoint_path,
 ):
     if input_event_file:
         camera, camera_type = from_file(input_event_file)
@@ -118,8 +135,10 @@ def run(
         camera, camera_type = from_camera()
     if camera_type == "Prophesee":
         from eseg.utils.dataviewers import dataviewerprophesee as dataviewer
-    else:
+    elif camera_type == "DAVIS":
         from eseg.utils.dataviewers import dataviewerdavis as dataviewer
+    elif camera_type == "H5PY":
+        from eseg.utils.dataviewers import dataviewerh5py as dataviewer
     viewer = dataviewer(
         camera,
         slice_time_ms=slice_time_ms,
@@ -127,7 +146,7 @@ def run(
         video_save_path=save_video,
         verbose=verbose,
     )
-    model = load_model()
+    model = load_model(model_type=model_type, checkpoint_path=checkpoint_path)
 
     viewer.setModel(model)
     viewer.run()
@@ -141,4 +160,6 @@ if __name__ == "__main__":
         filter_size_ms=args.filter_size_ms,
         save_video=args.save_output_video,
         verbose=args.verbose,
+        model_type=args.model,
+        checkpoint_path=base_checkpoint_path,
     )

@@ -77,7 +77,7 @@ class dataviewer:
                     if len(times) > 0:
                         avg_time = sum(times) / len(times)
                         print(f"  - {key} sub-step {kkey}: {avg_time*1000:.2f} ms over {len(times)} runs, max {max(times)*1000:.2f} ms, min {min(times)*1000:.2f} ms, std {np.std(times)*1000:.2f} ms")
-    def extractEvents(self, events, reversex: bool = False) -> torch.Tensor:
+    def extractEvents(self, events, reversex: bool = False,normalize_p = True) -> torch.Tensor:
         """Convert structured event arrays to tensor (t,x,y,p) - optimized version."""
         # Pre-allocate tensor for better memory efficiency
         n_events = len(events)
@@ -89,7 +89,10 @@ class dataviewer:
         # Direct tensor operations for speed
         xs = self.width - events["x"] - 1 if reversex else events["x"]
         ys = events["y"]
-        ps = 2 * events["polarity"] - 1 if reversex else 2 * events["p"] - 1
+        if not normalize_p:
+            ps = events["polarity"] if reversex else events["p"]
+        else:
+            ps = 2 * events["polarity"] - 1 if reversex else 2 * events["p"] - 1
         ts = events["timestamp"] if reversex else events["t"]
         
         # Normalize timestamps in-place
@@ -142,9 +145,9 @@ class dataviewer:
     def retrieveEvents(self, events):
         self.instant_events = events
 
-    def processEvents(self, events, reversex: bool = False):
+    def processEvents(self, events, reversex: bool = False, normalize_p: bool = True):
         start_time = time.time()
-        events_tensor = self.extractEvents(events.numpy().copy(), reversex=reversex)
+        events_tensor = self.extractEvents(events.numpy().copy(), reversex=reversex, normalize_p=normalize_p) if not isinstance(events, np.ndarray) == True else self.extractEvents(events, reversex=reversex, normalize_p=normalize_p)
         self.events = events_tensor
         preprocess_time = time.time() - start_time
         self.inference_times["preprocess"].append(preprocess_time)
@@ -249,7 +252,7 @@ class dataviewerprophesee(dataviewer):
         self.buffer = EventCDBuffer()
         self.width, self.height = self.camera.width(), self.camera.height()
 
-        slice_condition = SliceCondition.make_n_us(slice_time_ms * 1000)
+        slice_condition = SliceCondition.make_n_us(int(slice_time_ms * 1000))
         self.slicer = CameraStreamSlicer(self.camera.move(), slice_condition=slice_condition)
         self.activity_filter = ActivityNoiseFilterAlgorithm(
             self.width, self.height, filter_size_ms * 1000
@@ -263,3 +266,56 @@ class dataviewerprophesee(dataviewer):
     def step(self, slice):
         self.activity_filter.process_events(slice.events, self.buffer)
         self.processEvents(self.buffer, reversex=False)
+class dataviewerh5py(dataviewer):
+    """Viewer for H5PY event files using h5py."""
+
+    def __init__(
+        self,
+        camera,
+        slice_time_ms: int = 100,
+        filter_size_ms: int = 20,
+        video_save_path: Optional[str] = None,
+        verbose: bool = False,
+    ):
+        import h5py
+
+        super().__init__(camera, video_save_path=video_save_path, verbose=verbose)
+        print("Using h5py for event processing")
+        
+        self.events_data = torch.Tensor(camera["vids"][:,:4])
+        self.events_data = np.array(
+            list(
+                zip(
+                    self.events_data[:, 0].numpy(),
+                    self.events_data[:, 1].numpy(),
+                    self.events_data[:, 2].numpy(),
+                    self.events_data[:, 3].numpy(),
+                )
+            ),
+            dtype=[("t", "f4"), ("x", "u2"), ("y", "u2"), ("p", "i1")],
+        )
+        self.width = camera["width"][()] if "width" in camera else 346
+        self.height =  camera["height"][()] if "height" in camera else 260
+        self.num_events = self.events_data.shape[0]
+        self.slice_time = slice_time_ms / 1000.0
+        self.current_time = 0
+        
+    def run(self):
+        while len(self.events_data) > 0:
+            with torch.no_grad():
+                self.step()
+
+    def step(self):
+
+        times = self.events_data["t"]
+        indices = (times > self.current_time) * (times <= (self.current_time + self.slice_time))
+        events = self.events_data[indices]
+        ## give name to columns
+        ## pop indices from events
+        self.events_data = self.events_data[~indices]
+        self.current_time += self.slice_time
+        if events is None or len(events) == 0:
+            return
+
+        
+        self.processEvents(events, reversex=False, normalize_p=False)

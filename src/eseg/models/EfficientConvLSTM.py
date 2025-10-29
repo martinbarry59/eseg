@@ -106,6 +106,27 @@ class FastDecoder(nn.Module):
             nn.Conv2d(8, 1, 1),
             nn.Sigmoid()
         )
+    
+    def _match_size(self, x: torch.Tensor, ref: torch.Tensor) -> torch.Tensor:
+        """Align x spatial size to ref using symmetric pad/crop (no resampling)."""
+        H, W = ref.shape[-2:]
+        h, w = x.shape[-2:]
+        # Pad if smaller
+        pad_h = max(0, H - h)
+        pad_w = max(0, W - w)
+        if pad_h or pad_w:
+            top = pad_h // 2
+            bottom = pad_h - top
+            left = pad_w // 2
+            right = pad_w - left
+            x = F.pad(x, (left, right, top, bottom))
+            h, w = x.shape[-2:]
+        # Center-crop if larger
+        if h > H or w > W:
+            ys = (h - H) // 2
+            xs = (w - W) // 2
+            x = x[:, :, ys:ys + H, xs:xs + W]
+        return x
         
     def _make_up_layer(self, in_channels, out_channels):
         return nn.Sequential(
@@ -126,9 +147,9 @@ class FastDecoder(nn.Module):
         for i, (up_layer, skip_feat) in enumerate(zip(self.up_layers, skip_feats_for_decoder)):
             x = up_layer[:3](x)  # ConvTranspose + BN + ReLU
             
-            # Adjust size to match skip feature
+            # Align spatial dims to match skip feature without resampling
             if x.shape[-2:] != skip_feat.shape[-2:]:
-                x = F.interpolate(x, size=skip_feat.shape[-2:], mode='bilinear', align_corners=False)
+                x = self._match_size(x, skip_feat)
             
             # Apply skip connection
             if self.method == "concatenate":
@@ -138,9 +159,9 @@ class FastDecoder(nn.Module):
             x = up_layer[3:](x)  # Final conv + BN + ReLU
         
         # Final upsampling to target resolution
-        x = self.final_up(x)  # 173x130 -> 346x260
+        x = self.final_up(x)  # doubles spatial size
         x = self.final_conv(x)
-        # Ensure exact output size
+        # Ensure exact output size is dictated by the upsampling chain; avoid resampling here
         return x
 
 class EfficientConvLSTM(nn.Module):
@@ -211,16 +232,26 @@ class EfficientConvLSTM(nn.Module):
             # Encode with skip features
             self.model_inference_times["voxelization"].append(time.time() - start_time)
             start_time = time.time()
-            features, skip_feats = self.encoder(hist_events)  # [B, 256, 22, 17], skip_feats
+            features, skip_feats = self.encoder(hist_events)
             all_skip_feats.append(skip_feats)
             self.model_inference_times["Encoder"].append(time.time() - start_time)
-            # Initialize hidden state if needed
+            # Initialize or validate hidden state spatial dims
             if self.hidden_state is None:
                 _, _, H, W = features.shape
                 self.hidden_state = (
                     torch.zeros(B, 128, H, W, device=features.device),
                     torch.zeros(B, 128, H, W, device=features.device)
                 )
+            else:
+                hH, hW = self.hidden_state[0].shape[-2:]
+                fH, fW = features.shape[-2:]
+                if (hH != fH) or (hW != fW):
+                    # Resolution changed: reset recurrent state to avoid mismatch
+                    self.reset_states()
+                    self.hidden_state = (
+                        torch.zeros(B, 128, fH, fW, device=features.device),
+                        torch.zeros(B, 128, fH, fW, device=features.device)
+                    )
             
             # Apply LSTM
             h_new, c_new = self.lstm_cell(features, self.hidden_state)
@@ -229,13 +260,13 @@ class EfficientConvLSTM(nn.Module):
             start_time = time.time()
             # Decode with skip connections
             if self.skip_connections:
-                output = self.decoder(h_new, skip_feats)  # [B, 1, 260, 346]
+                output = self.decoder(h_new, skip_feats)
             else:
-                output = self.decoder(h_new, [])  # No skip connections
+                output = self.decoder(h_new, [])
             outputs.append(output)
         
         # Stack outputs
-        outputs = torch.cat(outputs, dim=1)  # [B, T, 260, 346]
+        outputs = torch.cat(outputs, dim=1)
         self.model_inference_times["upsampling"].append(time.time() - start_time)
         # Return dummy encodings for compatibility
         dummy_encodings = h_new.unsqueeze(1).repeat(1, len(event_sequence), 1, 1, 1)
