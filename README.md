@@ -1,75 +1,83 @@
-# Human Instance Segmentation using Evn
+# eseg
+
+Event-based depth/segmentation research package with ConvLSTM models, data utilities, and live camera streaming helpers.
 
 ![](pedestrians.gif)
 
-
 ## Features
-- ConvLSTM-based depth estimation model for event streams
-- MobileNetV2 feature encoder with UNet-like decoder
-- Event voxelization and augmentation utilities
-- Real-time camera viewers (Metavision / DAVIS) with overlay visualization
-- Mixed perceptual + edge loss utilities (LPIPS + Sobel)
 
-## Requirements
-We implemented the dataviewers on Both [dvprocessing](https://dv-processing.inivation.com/master/index.html) and [metavisionSDK](https://docs.prophesee.ai/stable/get_started/get_started_python.html)
+- ConvLSTM-based models for event-stream inference
+- Event voxelization and preprocessing helpers
+- Utilities for HDF5/AEDAT4/RAW event data
+- Live streaming pipeline for Prophesee and DAVIS cameras
+- Training helpers (losses, plotting, and evaluation utilities)
 
+## Python compatibility
 
-Please install [metavisionSDK](https://docs.prophesee.ai/stable/get_started/get_started_python.html) for Prophesee live camera. 
-
-⚠️ Warning DO NOT forget to set metavisionsdk in your python path especially for windows!
-
-And / Or
-
-[dvprocessing](https://dv-processing.inivation.com/master/index.html) for Davis Cameras
-
-For hdf5 file we use [metavisionSDK](https://docs.prophesee.ai/stable/get_started/get_started_python.html)  aedat files can be processed using [dvprocessing](https://dv-processing.inivation.com/master/index.html)
-
-Pleas, before installing eseg install a GPU enabled pytorch here: https://pytorch.org/get-started/locally/
-
+This release currently targets **Python 3.12**.
 
 ## Installation
 
-
+Install from PyPI:
 
 ```bash
 pip install eseg
 ```
-(Once published to PyPI.)
 
-For development:
+Install from source (development):
+
 ```bash
-git clone https://github.com/youruser/eseg.git
+git clone <your-repository-url>
 cd eseg
 python -m venv .venv
-source .venv/bin/activate  # Linux / macOS
-pip install -e .[dev,viewer]
-
-```
-⚠️ Warning if you work on a virtualenvironment you will need to copy your global sdk library to your local environment
-```
-cp -r path/to/your/metavisionsdk/metavision_* <path/to/your/virtualenv/python<yourversion>/site-packages/
+source .venv/bin/activate  # Linux/macOS
+pip install -e .[dev]
 ```
 
+## Optional runtime dependencies for live cameras
 
-## Quick Start
+For camera streaming, install one or both vendor SDKs:
+
+- Prophesee: [Metavision SDK](https://docs.prophesee.ai/stable/get_started/get_started_python.html)
+- iniVation DAVIS: [dv-processing](https://dv-processing.inivation.com/master/index.html)
+
+If you use GPU inference/training, install a CUDA-enabled PyTorch build first:
+[https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)
+
+## Quick start
+
 ```python
-import torch
-from eseg.models import ConvLSTM
-# TODO: usage example after final API stabilizes
+import eseg
+from eseg.models.ConvLSTM import EConvlstm
+
+print(eseg.__version__)
+model = EConvlstm(light=False)
 ```
 
-## Live Stream
+## Run live stream
+
 ```bash
-python -m eseg.live_stream
+python -m eseg.stream --help
 ```
 
-## Testing
+Example:
+
+```bash
+python -m eseg.stream -m full --slice-time-ms 100
+```
+
+## Development
+
+Run tests:
+
 ```bash
 pytest
 ```
 
 ## License
-MIT. See `LICENSE`.
 
-## Disclaimer
-Research code; APIs may change before 1.0.0.
+MIT License. See LICENSE.
+
+## Notes
+
+This is research-oriented software; interfaces may evolve between releases.
